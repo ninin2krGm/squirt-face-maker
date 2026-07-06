@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>러닝 페이스 메이커</title>
+    <!-- 앱 맞춤형 네온 러너 SVG 파비콘 적용 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='28' fill='%230f172a'/%3E%3Ccircle cx='58' cy='25' r='8' fill='%235d5bf5'/%3E%3Cpath d='M45 40 L55 35 L63 48 L73 43 M55 35 L50 53 L35 58 M50 53 L60 75 L75 75' stroke='%235d5bf5' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M20 35 H30 M15 50 H27 M22 65 H32' stroke='%238b8af7' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #060913;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Glassmorphism panel styling matching image_fb82d9.png */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        /* Custom ultra-wide range slider thumb */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 12px;
+            background: #111827;
+            border-radius: 999px;
+            outline: none;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #5d5bf5;
+            cursor: pointer;
+            box-shadow: 0 0 16px rgba(93, 91, 245, 0.9), inset 0 0 6px rgba(255, 255, 255, 0.6);
+            transition: transform 0.1s ease, background-color 0.1s;
+            border: 3px solid #ffffff;
+        }
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.3);
+            background: #8b8af7;
+        }
+        /* Perfect pulse-beat animation for visual cadence match */
+        @keyframes pulse-beat {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 30px rgba(93, 91, 245, 0.3), inset 0 0 20px rgba(93, 91, 245, 0.1);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 60px rgba(93, 91, 245, 0.9), inset 0 0 30px rgba(93, 91, 245, 0.4);
+                border-color: #5d5bf5;
+            }
+        }
+        .pulse-active {
+            animation: pulse-beat 0.12s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+        @keyframes slow-rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .rotate-active {
+            animation: slow-rotate 10s linear infinite;
+        }
+    </style>
+</head>
+<body class="w-full min-h-screen text-slate-100 p-4 pb-safe flex flex-col justify-between overflow-x-hidden">
+
+    <!-- TOP HEADER (FULL WIDTH) -->
+    <header class="w-full flex items-center justify-between py-2 mb-2">
+        <div class="flex items-center gap-3">
+            <!-- Icon design inspired by image_fb82d9.png -->
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-black tracking-tight text-white leading-tight">러닝 페이스 메이커</h1>
+                <p class="text-xs text-indigo-300/80 font-semibold">자동 템포 & 케이던스 측정</p>
+            </div>
+        </div>
+        <!-- Sound toggle with premium tactile feedback design -->
+        <button id="soundToggleBtn" class="w-11 h-11 rounded-2xl bg-slate-900/80 hover:bg-slate-800/80 flex items-center justify-center text-slate-200 border border-slate-800 transition-colors" title="소리 토글">
+            <svg id="soundOnIcon" class="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+            </svg>
+            <svg id="soundOffIcon" class="w-5.5 h-5.5 hidden text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" opacity="0.4"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+            </svg>
+        </button>
+    </header>
+
+    <!-- MAIN BODY SECTION -->
+    <main class="flex-1 flex flex-col justify-around gap-4 my-2">
+
+        <!-- STATUS BAR -->
+        <div class="flex justify-center">
+            <div class="glass-card px-4 py-2 rounded-full flex items-center justify-center gap-2.5 border border-indigo-500/10 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" id="statusDot"></span>
+                <span id="statusText" class="text-xs font-bold text-indigo-200 tracking-wide">스피너를 누르면 박자가 시작됩니다</span>
+            </div>
+        </div>
+
+        <!-- CENTRAL SPINNER (ACTS AS START/STOP BUTTON) -->
+        <div class="flex flex-col items-center justify-center py-2 relative">
+            <!-- Decorative Spinning Dashed Aura -->
+            <div id="decoRing" class="absolute w-[290px] h-[290px] rounded-full border-2 border-dashed border-indigo-500/5 pointer-events-none transition-all duration-300"></div>
+            
+            <!-- Touch Controller Body -->
+            <div id="pulseCircle" class="w-[250px] h-[250px] rounded-full bg-gradient-to-b from-[#16203a] to-[#0c1222] border-[6px] border-slate-800/90 flex flex-col items-center justify-center transition-all duration-150 relative z-10 shadow-[inset_0_4px_30px_rgba(0,0,0,0.9),0_15px_40px_rgba(0,0,0,0.6)] cursor-pointer active:scale-95 group">
+                
+                <!-- Glossy inner reflections -->
+                <div class="absolute inset-0 rounded-full border border-white/5 pointer-events-none"></div>
+
+                <p class="text-[11px] font-black text-indigo-400/90 tracking-[0.2em] uppercase mb-1">RUNNING TEMPO</p>
+                <div class="flex items-baseline justify-center">
+                    <span id="spmDisplay" class="text-7xl font-black tracking-tight text-white leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]">120</span>
+                </div>
+                <span class="text-xs font-bold text-slate-400/80 mt-2">SPM (분당 발걸음)</span>
+                
+                <!-- Clean Minimalist Play/Pause Icons (No Borders) -->
+                <div class="mt-4 flex items-center justify-center">
+                    <svg id="playIcon" class="w-8 h-8 text-indigo-400/80 transition-all duration-200 hover:text-indigo-300" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 5v14l11-7z"></path>
+                    </svg>
+                    <svg id="pauseIcon" class="w-8 h-8 text-rose-500 transition-all duration-200 hidden hover:text-rose-400" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- ULTRA-LONG PRECISION SLIDER (DIRECTLY UNDER SPINNER) -->
+        <div class="glass-card rounded-3xl p-5 shadow-[0_20px_40px_rgba(0,0,0,0.6)] border border-slate-800/80 w-full">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                    </svg>
+                    <h2 class="text-sm font-extrabold tracking-wide text-slate-200">목표 케이던스 세밀 설정</h2>
+                </div>
+                <div class="flex items-center gap-1.5 bg-[#04070f] px-3.5 py-1.5 rounded-xl border border-slate-800/80">
+                    <span id="sliderValDisplay" class="text-sm font-black text-[#5d5bf5]">120</span>
+                    <span class="text-[10px] text-slate-500 font-black">SPM</span>
+                </div>
+            </div>
+
+            <!-- Absolute Maximum Horizontal Space Range Slider -->
+            <div class="w-full space-y-4">
+                <div class="py-2">
+                    <input type="range" id="cadenceRange" min="80" max="160" value="120" step="1" class="w-full cursor-pointer">
+                </div>
+
+                <!-- Labels corresponding to key milestones -->
+                <div class="flex justify-between text-[11px] text-slate-500 font-bold px-1 select-none">
+                    <div class="text-left">
+                        <span class="block text-slate-400 font-black">80 SPM</span>
+                        <span class="text-slate-600 text-[10px] font-medium">가벼운 걷기</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-slate-400 font-black">120 SPM</span>
+                        <span class="text-slate-600 text-[10px] font-medium">보통 조깅</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-slate-400 font-black">160 SPM</span>
+                        <span class="text-slate-600 text-[10px] font-medium">빠른 러닝</span>
+                    </div>
+                </div>
+
+                <!-- Fine Tuning Adjust Buttons (Moved below slider to maintain maximum width) -->
+                <div class="flex gap-3 pt-1">
+                    <button id="minusBtn" class="flex-1 py-3 rounded-2xl bg-slate-900/60 hover:bg-slate-800/60 active:bg-slate-800 text-white font-extrabold flex items-center justify-center transition-all border border-slate-800 active:scale-95">
+                        <span class="text-lg mr-1">-</span> 1 SPM 줄이기
+                    </button>
+                    <button id="plusBtn" class="flex-1 py-3 rounded-2xl bg-slate-900/60 hover:bg-slate-800/60 active:bg-slate-800 text-white font-extrabold flex items-center justify-center transition-all border border-slate-800 active:scale-95">
+                        <span class="text-lg mr-1">+</span> 1 SPM 늘리기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MANUAL TAP TEMPO CONTROLLER -->
+        <div class="w-full">
+            <button id="tapTempoBtn" class="w-full py-8 rounded-3xl bg-indigo-950/20 hover:bg-indigo-900/10 active:bg-indigo-900/30 border border-indigo-500/10 text-indigo-400 font-bold text-base tracking-wider flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97] shadow-lg">
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                    <span class="text-base font-black">발걸음에 맞춰 직접 두드리기 (TAP)</span>
+                </div>
+                <span class="text-xs text-indigo-400/50 font-medium tracking-wide">달리는 발소리 타이밍에 맞춰 이 영역을 터치하세요</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- FOOTER STAMP -->
+    <footer class="w-full py-2 text-center border-t border-slate-900/40">
+        <p class="text-[10px] font-bold tracking-widest text-slate-600 uppercase">RUNNING PACE MAKER &copy; 2026</p>
+    </footer>
+
+    <!-- AUDIO ENGINE & INTERACTION SCRIPT -->
+    <script>
+        let isPlaying = false;
+        let isMuted = false;
+        let currentSPM = 120;
+        
+        // Tap Tempo logic variables
+        let tapTimes = [];
+        let lastTapTime = 0;
+
+        // Accurate clock scheduler variables
+        let audioContext = null;
+        let nextTickTime = 0.0;
+        let schedulerTimerId = null;
+        const lookahead = 25.0; // Interval in milliseconds to look forward
+        const scheduleAheadTime = 0.1; // Amount of audio time to pre-schedule (seconds)
+
+        // Elements
+        const pulseCircle = document.getElementById('pulseCircle');
+        const spmDisplay = document.getElementById('spmDisplay');
+        const sliderValDisplay = document.getElementById('sliderValDisplay');
+        const cadenceRange = document.getElementById('cadenceRange');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundOnIcon = document.getElementById('soundOnIcon');
+        const soundOffIcon = document.getElementById('soundOffIcon');
+        const decoRing = document.getElementById('decoRing');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const minusBtn = document.getElementById('minusBtn');
+        const plusBtn = document.getElementById('plusBtn');
+        const tapTempoBtn = document.getElementById('tapTempoBtn');
+
+        // Initializing context with proper safety fallback
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Standardize UI Update values
+        function updateUI() {
+            spmDisplay.textContent = currentSPM;
+            sliderValDisplay.textContent = currentSPM;
+            cadenceRange.value = currentSPM;
+        }
+
+        // Produce a clean flashing effect synchronized with audio beat
+        function triggerBeatFlash() {
+            pulseCircle.classList.remove('pulse-active');
+            void pulseCircle.offsetWidth; // Trigger reflow
+            pulseCircle.classList.add('pulse-active');
+
+            pulseCircle.style.borderColor = '#5d5bf5';
+            setTimeout(() => {
+                if (isPlaying) {
+                    pulseCircle.style.borderColor = '#4f46e5';
+                } else {
+                    pulseCircle.style.borderColor = 'rgba(30, 41, 59, 0.9)';
+                }
+            }, 80);
+        }
+
+        // Synthesis for clean metronome sound
+        function scheduleTick(time) {
+            // 소리가 켜져 있을 때만 오디오 노드를 생성하여 사운드 재생
+            if (!isMuted) {
+                const osc = audioContext.createOscillator();
+                const envelope = audioContext.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000, time); // Clear 1000Hz frequency for running feedback
+
+                envelope.gain.setValueAtTime(0.8, time);
+                envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05); // Snap decay
+
+                osc.connect(envelope);
+                envelope.connect(audioContext.destination);
+
+                osc.start(time);
+                osc.stop(time + 0.06);
+            }
+
+            // 음소거(isMuted) 상태여도 시각적 박자 애니메이션은 항상 예약 실행
+            const delayMs = (time - audioContext.currentTime) * 1000;
+            setTimeout(() => {
+                if (isPlaying) {
+                    triggerBeatFlash();
+                }
+            }, Math.max(0, delayMs));
+        }
+
+        // Scheduler loop for the high-accuracy clock
+        function metronomeScheduler() {
+            while (nextTickTime < audioContext.currentTime + scheduleAheadTime) {
+                scheduleTick(nextTickTime);
+                const secondsPerBeat = 60.0 / currentSPM;
+                nextTickTime += secondsPerBeat;
+            }
+            schedulerTimerId = setTimeout(metronomeScheduler, lookahead);
+        }
+
+        // Active State Execution
+        function startMetronome() {
+            initAudio();
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
+            isPlaying = true;
+            nextTickTime = audioContext.currentTime + 0.05;
+            metronomeScheduler();
+
+            pulseCircle.style.borderColor = '#4f46e5';
+            decoRing.classList.add('rotate-active');
+            decoRing.style.borderColor = 'rgba(93, 91, 245, 0.2)';
+            
+            // Toggle play/pause icons instead of button text
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+
+            statusDot.classList.remove('bg-indigo-500');
+            statusDot.classList.add('bg-rose-500');
+            statusText.textContent = "러닝 페이스 메이커 작동 중...";
+            
+            // Haptic trigger if supported
+            if (navigator.vibrate) {
+                navigator.vibrate(40);
+            }
+        }
+
+        // Standby State Execution
+        function stopMetronome() {
+            isPlaying = false;
+            clearTimeout(schedulerTimerId);
+
+            pulseCircle.style.borderColor = 'rgba(30, 41, 59, 0.9)';
+            decoRing.classList.remove('rotate-active');
+            decoRing.style.borderColor = 'rgba(93, 91, 245, 0.05)';
+            
+            // Toggle play/pause icons instead of button text
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+
+            statusDot.classList.remove('bg-rose-500');
+            statusDot.classList.add('bg-indigo-500');
+            statusText.textContent = "러닝 페이스 메이커 일시 정지";
+            
+            if (navigator.vibrate) {
+                navigator.vibrate([20, 50]);
+            }
+        }
+
+        function toggleMetronome() {
+            if (isPlaying) {
+                stopMetronome();
+            } else {
+                startMetronome();
+            }
+        }
+
+        function adjustSPM(amount) {
+            let target = currentSPM + amount;
+            if (target >= 80 && target <= 160) {
+                currentSPM = target;
+                updateUI();
+                if (navigator.vibrate) {
+                    navigator.vibrate(15);
+                }
+            }
+        }
+
+        // Tap tempo math detector
+        function registerTap() {
+            const now = performance.now();
+            
+            // Clear buffer if user stopped tapping for 2 seconds
+            if (now - lastTapTime > 2000) {
+                tapTimes = [];
+            }
+            
+            lastTapTime = now;
+            tapTimes.push(now);
+
+            // Button styling highlight
+            tapTempoBtn.classList.add('bg-indigo-600/20');
+            setTimeout(() => tapTempoBtn.classList.remove('bg-indigo-600/20'), 100);
+
+            if (tapTimes.length > 1) {
+                if (tapTimes.length > 5) {
+                    tapTimes.shift(); // sliding window of 5 elements
+                }
+
+                let sumIntervals = 0;
+                for (let i = 1; i < tapTimes.length; i++) {
+                    sumIntervals += (tapTimes[i] - tapTimes[i - 1]);
+                }
+                const avgInterval = sumIntervals / (tapTimes.length - 1);
+                const computedSPM = Math.round(60000 / avgInterval);
+
+                if (computedSPM >= 80 && computedSPM <= 160) {
+                    currentSPM = computedSPM;
+                    updateUI();
+                }
+            }
+            
+            if (navigator.vibrate) {
+                navigator.vibrate(25);
+            }
+        }
+
+        // Tap gestures
+        pulseCircle.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleMetronome();
+        });
+
+        pulseCircle.addEventListener('touchstart', () => {
+            initAudio();
+        });
+
+        // Horizontal slider change trigger
+        cadenceRange.addEventListener('input', (e) => {
+            currentSPM = parseInt(e.target.value);
+            updateUI();
+        });
+
+        // Micro-step controls
+        minusBtn.addEventListener('click', () => adjustSPM(-1));
+        plusBtn.addEventListener('click', () => adjustSPM(1));
+
+        // Click / Touch tap actions
+        tapTempoBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            registerTap();
+        });
+        tapTempoBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            registerTap();
+        });
+
+        // Sound controller
+        soundToggleBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                soundOnIcon.classList.add('hidden');
+                soundOffIcon.classList.remove('hidden');
+            } else {
+                soundOnIcon.classList.remove('hidden');
+                soundOffIcon.classList.add('hidden');
+                initAudio();
+            }
+        });
+
+        // Keyboard accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                toggleMetronome();
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+                adjustSPM(1);
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+                adjustSPM(-1);
+            } else if (e.key === 't' || e.key === 'T') {
+                registerTap();
+            }
+        });
+
+        // Initiate App State
+        updateUI();
+    </script>
+</body>
+</html>
