@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스쿼트 운동 페이스 타이머</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter & Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome 아이콘 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-person-running text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-tight text-white">스쿼트 페이스 메이커</h1>
+                    <p class="text-xs text-indigo-400 font-medium">자동 카운팅 & 세트 타이머</p>
+                </div>
+            </div>
+            <!-- 설정 하단 슬라이딩 토글 버튼 -->
+            <button id="toggle-settings-btn" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all text-slate-300">
+                <i class="fa-solid fa-sliders text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col justify-start items-center px-4 py-8 max-w-md mx-auto w-full space-y-6">
+        
+        <!-- 중앙 대형 세트 표시 배지 -->
+        <div class="flex justify-center w-full my-2">
+            <div class="px-8 py-2.5 bg-indigo-600/10 border-2 border-indigo-500/30 rounded-2xl shadow-lg shadow-indigo-500/5">
+                <span id="set-badge" class="text-3xl font-black text-indigo-400 tracking-widest">SET 1 / 5</span>
+            </div>
+        </div>
+
+        <!-- 이미지 오프셋 이슈 해결용 일치형 스피너 구조 -->
+        <div class="relative w-72 h-72 flex items-center justify-center">
+            
+            <!-- 배경 네온 광원 효과 -->
+            <div id="glow-effect" class="absolute w-60 h-60 rounded-full bg-indigo-500/10 blur-xl transition-all duration-300"></div>
+            
+            <!-- 원형 Progress Ring (전체 SVG의 -90도 회전을 통한 완벽 정렬 및 12시 시작 고정) -->
+            <svg class="absolute w-full h-full transform -rotate-90" viewBox="0 0 288 288">
+                <!-- 회색 가이드 라인 원 -->
+                <circle cx="144" cy="144" r="120" stroke="#1e293b" stroke-width="12" fill="transparent" />
+                <!-- 실시간 게이지 원 -->
+                <circle id="progress-circle" cx="144" cy="144" r="120" stroke="#6366f1" stroke-width="12" fill="transparent"
+                        stroke-dasharray="753.98" stroke-dashoffset="753.98" stroke-linecap="round" />
+            </svg>
+            
+            <!-- 중앙 텍스트 정보 수치 -->
+            <div class="absolute flex flex-col items-center text-center">
+                <span id="current-count" class="text-7xl font-black text-white tracking-tighter drop-shadow-md">0</span>
+                <div id="counter-sub-info" class="flex items-center space-x-1 mt-1">
+                    <span class="text-sm text-slate-400 font-medium">목표</span>
+                    <span id="target-count-label" class="text-sm text-indigo-400 font-bold">/ 50회</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 제어 컨트롤 버튼 -->
+        <div class="w-full grid grid-cols-3 gap-3 max-w-sm">
+            <!-- 초기화 버튼 -->
+            <button id="reset-btn" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700/60 text-slate-300 font-bold py-4 px-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all">
+                <i class="fa-solid fa-arrow-rotate-left text-lg"></i>
+                <span class="text-xs">처음부터</span>
+            </button>
+            
+            <!-- 시작 / 정지 메인 버튼 (휴식 중에는 '바로 시작'으로 자동 다이내믹 변경) -->
+            <button id="start-btn" class="col-span-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all text-lg">
+                <i class="fa-solid fa-play text-xl" id="start-btn-icon"></i>
+                <span id="start-btn-text">스쿼트 시작</span>
+            </button>
+        </div>
+
+        <!-- 설정 패널 (접고 펼치기 지원, 최하단 배치) -->
+        <div id="settings-panel" class="w-full bg-slate-800/90 border border-slate-700/50 rounded-2xl p-5 shadow-xl transition-all duration-300 transform scale-100">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-700/50 pb-2">
+                <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-indigo-400"></i> 운동 옵션 설정
+                </h3>
+                <span class="text-xs text-slate-400">자동 저장됩니다</span>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- 1회당 속도 조절 (0.5초 ~ 3.0초 범위 제어, 기본 1.8초 고정) -->
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-slate-300">스쿼트 속도 (1회 완료 시간)</span>
+                        <span class="text-indigo-400 font-bold" id="speed-val-display">1.8초</span>
+                    </div>
+                    <input type="range" id="rep-speed" min="0.5" max="3.0" step="0.1" value="1.8" 
+                           class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    <div class="flex justify-between text-[10px] text-slate-500 px-1 mt-0.5">
+                        <span>빠름 (0.5초)</span>
+                        <span>기본 (1.8초)</span>
+                        <span>느림 (3.0초)</span>
+                    </div>
+                </div>
+
+                <!-- 목표 개수, 목표 세트 및 휴식 시간 설정 (3열 레이아웃 조밀화) -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">세트당 목표</label>
+                        <div class="relative">
+                            <input type="number" id="target-reps" value="50" min="5" max="200" step="5"
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-2 pr-6 text-xs focus:outline-none focus:border-indigo-500 text-white font-semibold">
+                            <span class="absolute right-1.5 top-2.5 text-[10px] text-slate-500">회</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">목표 세트수</label>
+                        <div class="relative">
+                            <input type="number" id="target-sets" value="5" min="1" max="100" step="1"
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-2 pr-6 text-xs focus:outline-none focus:border-indigo-500 text-white font-semibold">
+                            <span class="absolute right-1.5 top-2.5 text-[10px] text-slate-500">Set</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">세트사이 휴식</label>
+                        <div class="relative">
+                            <input type="number" id="rest-time" value="60" min="10" max="300" step="10"
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-2 pr-6 text-xs focus:outline-none focus:border-indigo-500 text-white font-semibold">
+                            <span class="absolute right-1.5 top-2.5 text-[10px] text-slate-500">초</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 하단 푸터 및 안내 문구 -->
+    <footer class="py-6 text-center border-t border-slate-800/80 bg-slate-950/40 text-xs text-slate-500 px-4">
+        <p class="max-w-xs mx-auto mb-1">소리가 나지 않을 경우 기기의 무음 모드를 해제하고 볼륨을 켜주세요.</p>
+        <p class="text-[10px] text-slate-600">© 2026 스쿼트 페이스메이커 v2.4</p>
+    </footer>
+
+    <!-- 알림 메시지 토스트 오버레이 -->
+    <div id="toast-message" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-slate-800 border border-indigo-500 text-indigo-300 px-4 py-2.5 rounded-full text-xs font-semibold shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-info"></i> <span id="toast-text">안내 메시지</span>
+    </div>
+
+    <script>
+        // 상태값 변수 정의
+        let state = {
+            status: 'IDLE', // IDLE, COUNTDOWN, RUNNING, REST, PAUSED
+            currentSet: 1,
+            currentRep: 0,
+            repSpeed: 1.8, // 기본 속도 1.8초 고정
+            targetReps: 50, // 세트당 목표 개수
+            targetSets: 5,  // 목표 세트 수
+            restTime: 60, // 휴식 시간 (초)
+            restTimeLeft: 60, // 남은 휴식 시간
+            repElapsedTime: 0, // 현재 회차 진행 시간 (ms)
+            lastFrameTime: 0 // 이전 프레임 시간 기록
+        };
+
+        // UI 엘리먼트 수집
+        const progressCircle = document.getElementById('progress-circle');
+        const currentCountEl = document.getElementById('current-count');
+        const counterSubInfo = document.getElementById('counter-sub-info');
+        const speedValDisplay = document.getElementById('speed-val-display');
+        const repSpeedInput = document.getElementById('rep-speed');
+        const targetRepsInput = document.getElementById('target-reps');
+        const targetSetsInput = document.getElementById('target-sets');
+        const restTimeInput = document.getElementById('rest-time');
+        const setBadge = document.getElementById('set-badge');
+        const startBtn = document.getElementById('start-btn');
+        const startBtnIcon = document.getElementById('start-btn-icon');
+        const startBtnText = document.getElementById('start-btn-text');
+        const resetBtn = document.getElementById('reset-btn');
+        const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const glowEffect = document.getElementById('glow-effect');
+
+        // SVG Progress Circle 둘레 공식 (r=120 -> 2 * PI * r)
+        const CIRCLE_RADIUS = 120;
+        const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+
+        // Web Audio API 오디오 컨텍스트 (비프음 생성용)
+        let audioCtx = null;
+
+        // TTS 객체
+        let synth = window.speechSynthesis;
+        let voices = [];
+
+        // 브라우저 AudioContext 초기화
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // 비프 사운드 재생 기능
+        function playBeep(frequency = 900, duration = 0.12) {
+            try {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine'; // 깔끔하고 부드러운 사인파 비프음
+                osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime); // 볼륨 적절히 조절
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (err) {
+                console.warn('사운드 출력이 제한되었습니다:', err);
+            }
+        }
+
+        // 구글 한국어 여성 목소리를 찾아 반환하는 함수 (고정 사양)
+        function getGoogleKoreanVoice() {
+            if (typeof speechSynthesis === 'undefined') return null;
+            voices = synth.getVoices();
+            
+            // 1순위: 'Google'과 'ko'를 모두 포함하는 목소리 검색 (구글 한국어 여성)
+            let googleKoVoice = voices.find(v => v.lang.includes('ko') && v.name.toLowerCase().includes('google'));
+            if (googleKoVoice) return googleKoVoice;
+
+            // 2순위: 구글 보이스가 없는 경우 시스템 기본 한국어(ko) 목소리 사용
+            let standardKoVoice = voices.find(v => v.lang.includes('ko'));
+            return standardKoVoice || null;
+        }
+
+        // 텍스트 말하기 (TTS) 함수
+        function speak(text) {
+            if (typeof speechSynthesis === 'undefined' || !text) return;
+            
+            // 이전 진행 중인 음성이 있으면 취소하여 대사 겹침이나 리듬 딜레이를 방지
+            synth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ko-KR';
+            
+            // 구글 한국어 보이스 매칭 적용
+            const selectedVoice = getGoogleKoreanVoice();
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+            
+            utterance.rate = 1.1; // 운동에 활력을 주기 위해 정속보다 약간 빠르게 설정
+            utterance.pitch = 1.0; 
+
+            synth.speak(utterance);
+        }
+
+        // 로컬 알림 토스트 팝업 유틸리티
+        function showToast(msg) {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            toastText.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2500);
+        }
+
+        // 목표 라벨 화면 갱신 유틸리티
+        function updateTargetRepsDisplay() {
+            if (state.status !== 'REST') {
+                counterSubInfo.innerHTML = `
+                    <span class="text-sm text-slate-400 font-medium">목표</span>
+                    <span id="target-count-label" class="text-sm text-indigo-400 font-bold">/ ${state.targetReps}회</span>
+                `;
+            }
+        }
+
+        // 로컬스토리지에서 세팅 로드
+        function loadSettings() {
+            const savedSpeed = localStorage.getItem('squat_speed');
+            const savedTarget = localStorage.getItem('squat_target');
+            const savedTargetSets = localStorage.getItem('squat_target_sets');
+            const savedRest = localStorage.getItem('squat_rest');
+
+            // 기본 속도는 1.8초 고정 (최초 진입 시)
+            if (savedSpeed) state.repSpeed = parseFloat(savedSpeed);
+            else state.repSpeed = 1.8;
+
+            if (savedTarget) state.targetReps = parseInt(savedTarget, 10);
+            if (savedTargetSets) state.targetSets = parseInt(savedTargetSets, 10);
+            if (savedRest) state.restTime = parseInt(savedRest, 10);
+
+            // UI 제어 상태 복원
+            repSpeedInput.value = state.repSpeed;
+            speedValDisplay.textContent = `${state.repSpeed.toFixed(1)}초`;
+            targetRepsInput.value = state.targetReps;
+            targetSetsInput.value = state.targetSets;
+            restTimeInput.value = state.restTime;
+            
+            updateTargetRepsDisplay();
+            setBadge.textContent = `SET ${state.currentSet} / ${state.targetSets}`;
+        }
+
+        let animationFrameId = null;
+        let restIntervalId = null;
+        let countdownIntervalId = null;
+
+        // 최초 운동 개시 전 5초 대기 카운트다운 진행 함수
+        function startCountdown() {
+            state.status = 'COUNTDOWN';
+            let countdownVal = 5;
+            currentCountEl.textContent = countdownVal;
+            
+            // 제어 버튼을 카운트다운 중 상태(취소 가능)로 즉각 변경
+            startBtnText.textContent = '카운트다운 취소';
+            startBtnIcon.className = 'fa-solid fa-hourglass-half text-xl animate-spin';
+            startBtn.className = 'col-span-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all text-lg';
+
+            countdownIntervalId = setInterval(() => {
+                countdownVal--;
+                if (countdownVal > 0) {
+                    currentCountEl.textContent = countdownVal;
+                    playBeep(600, 0.08); // 준비 신호용 약간 낮은 비프음만 유지 (음성 안내 제거)
+                } else {
+                    clearInterval(countdownIntervalId);
+                    
+                    // 정규 운동 가동 상태로 안전 진입
+                    state.status = 'RUNNING';
+                    currentCountEl.textContent = "0";
+                    startBtnText.textContent = '일시 정지';
+                    startBtnIcon.className = 'fa-solid fa-pause text-xl';
+                    startBtn.className = 'col-span-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all text-lg';
+                    
+                    playBeep(1200, 0.35); // 높은 음조의 힘찬 출발 비프음
+                    speak("시작!");
+                    
+                    state.lastFrameTime = performance.now();
+                    animationFrameId = requestAnimationFrame(workoutLoop);
+                }
+            }, 1000);
+        }
+
+        // 실시간 운동 타이머 메인 렌더 러너 (Smooth 60fps Spinner 전용)
+        function workoutLoop(timestamp) {
+            if (state.status !== 'RUNNING') return;
+
+            if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+            const delta = timestamp - state.lastFrameTime;
+            state.lastFrameTime = timestamp;
+
+            // 현재 스쿼트 속도 밀리초 변환
+            const speedMs = state.repSpeed * 1000;
+            state.repElapsedTime += delta;
+
+            // 스피너 원형 비율 계산 및 드로우 업데이트
+            const progressRatio = Math.min(state.repElapsedTime / speedMs, 1);
+            updateProgressCircle(progressRatio);
+
+            // 1회 완료 조건 달성 시
+            if (state.repElapsedTime >= speedMs) {
+                state.repElapsedTime = 0; 
+                state.currentRep++;
+                
+                // 카운터 텍스트 실시간 반영
+                currentCountEl.textContent = state.currentRep;
+
+                // 1회 완료 알람음 발생 (Beep!)
+                playBeep(900, 0.12);
+
+                // 분기 조건 처리 (5회 배수 알림 vs 세트 완료 판정)
+                if (state.currentRep >= state.targetReps) {
+                    // 목표 달성 -> 휴식 단계 전환
+                    endSet();
+                    return; // 루프 즉시 종료
+                } else if (state.currentRep % 5 === 0) {
+                    // 5회마다 깔끔하고 정확하게 음성 통보
+                    speak(`${state.currentRep}회`);
+                }
+            }
+
+            // 지속 실행
+            animationFrameId = requestAnimationFrame(workoutLoop);
+        }
+
+        // 스피너 원형 테두리 게이지 변경 함수
+        function updateProgressCircle(ratio) {
+            const offset = CIRCLE_CIRCUMFERENCE - (ratio * CIRCLE_CIRCUMFERENCE);
+            progressCircle.style.strokeDashoffset = offset;
+        }
+
+        // 세트 종료 및 쉬는 시간 진입 세팅
+        function endSet() {
+            cancelAnimationFrame(animationFrameId);
+            state.status = 'REST';
+            state.restTimeLeft = state.restTime;
+            
+            // 글로우 테마 변경 (따뜻한 황금빛 휴식 글로우)
+            glowEffect.className = "absolute w-60 h-60 rounded-full bg-amber-500/15 blur-xl transition-all duration-300";
+
+            // 스피너 내부 정보 "휴식 중" 안내로 다이내믹 변경
+            currentCountEl.textContent = state.restTimeLeft;
+            counterSubInfo.innerHTML = `<span class="text-sm text-amber-400 font-bold tracking-wide">휴식 중</span>`;
+
+            // 제어 버튼을 '바로 시작' 액티브 스타일로 전환
+            startBtnText.textContent = '바로 시작';
+            startBtnIcon.className = 'fa-solid fa-forward text-xl';
+            startBtn.className = 'col-span-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all text-lg';
+            startBtn.classList.remove('opacity-50', 'pointer-events-none'); // 휴식 중에도 클릭 가능하게 개방
+
+            // 스피너 게이지를 휴식(Amber) 컬러 및 1초 슬라이딩 트랜지션 스타일로 변경
+            progressCircle.style.transition = 'stroke-dashoffset 1s linear';
+            progressCircle.setAttribute('stroke', '#f59e0b');
+            
+            // 가득 찬 원에서 출발
+            updateProgressCircle(1);
+
+            // 음성 전달 분기구조 (목표 세트 완수 분기 확인)
+            if (state.currentSet === state.targetSets) {
+                speak(`목표한 ${state.targetSets} 세트를 모두 완료하셨습니다! 대단하십니다. 이어서 운동을 계속 진행합니다.`);
+            } else {
+                speak(`${state.currentSet}세트 완료. ${state.restTime}초 동안 휴식합니다.`);
+            }
+
+            // 휴식 전용 1초 주기 타이머 작동 (남은 시간에 비례해 원형 크기 감소)
+            restIntervalId = setInterval(() => {
+                state.restTimeLeft--;
+                currentCountEl.textContent = state.restTimeLeft;
+
+                const ratio = state.restTimeLeft / state.restTime;
+                updateProgressCircle(ratio);
+
+                if (state.restTimeLeft <= 0) {
+                    clearInterval(restIntervalId);
+                    startNextSet();
+                }
+            }, 1000);
+        }
+
+        // 휴식 끝 및 다음 세트 진입 로직
+        function startNextSet() {
+            state.currentSet++;
+            state.currentRep = 0;
+            state.repElapsedTime = 0;
+            state.status = 'RUNNING';
+
+            // UI 셋업 초기화
+            currentCountEl.textContent = "0";
+            setBadge.textContent = `SET ${state.currentSet} / ${state.targetSets}`;
+            
+            glowEffect.className = "absolute w-60 h-60 rounded-full bg-indigo-500/10 blur-xl transition-all duration-300";
+
+            // 스피너 테두리 및 트랜지션 원형 원복 (즉시 60FPS 모드)
+            progressCircle.style.transition = 'none';
+            progressCircle.setAttribute('stroke', '#6366f1');
+            updateProgressCircle(0);
+
+            // 목표 수치 안내창 원복
+            updateTargetRepsDisplay();
+
+            // 제어 버튼 원래대로 (일시 정지)
+            startBtnText.textContent = '일시 정지';
+            startBtnIcon.className = 'fa-solid fa-pause text-xl';
+            startBtn.className = 'col-span-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all text-lg';
+
+            // 안내 방송
+            speak(`휴식 끝. ${state.currentSet}세트 시작!`);
+            
+            // 다시 운동 루프 작동
+            state.lastFrameTime = performance.now();
+            animationFrameId = requestAnimationFrame(workoutLoop);
+        }
+
+        // 앱 제어 트리거 통합 관리
+        function toggleApp() {
+            // 브라우저 오디오 보안 대응 활성화
+            initAudio();
+
+            // 카운트다운 중 버튼 클릭 시 취소 처리 및 원상복귀
+            if (state.status === 'COUNTDOWN') {
+                clearInterval(countdownIntervalId);
+                resetApp();
+                showToast("카운트다운이 취소되었습니다.");
+                return;
+            }
+
+            // 휴식 중 '바로 시작' 클릭 시 즉각 다음 세트 진입
+            if (state.status === 'REST') {
+                clearInterval(restIntervalId);
+                startNextSet();
+                showToast("휴식을 건너뛰고 바로 운동을 시작합니다!");
+                return;
+            }
+
+            if (state.status === 'IDLE') {
+                // 완전히 처음 시작할 때 5초 대기 카운트다운 가동
+                startCountdown();
+            } else if (state.status === 'PAUSED') {
+                // 일시 정지 후 다시 시작할 때는 지체 없이 즉시 동작 가동
+                state.status = 'RUNNING';
+                startBtnText.textContent = '일시 정지';
+                startBtnIcon.className = 'fa-solid fa-pause text-xl';
+                startBtn.className = 'col-span-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all text-lg';
+                
+                state.lastFrameTime = performance.now();
+                animationFrameId = requestAnimationFrame(workoutLoop);
+            } else if (state.status === 'RUNNING') {
+                // 일시정지 처리
+                state.status = 'PAUSED';
+                startBtnText.textContent = '다시 시작';
+                startBtnIcon.className = 'fa-solid fa-play text-xl';
+                startBtn.className = 'col-span-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all text-lg';
+                
+                cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        // 전체 카운팅 초기화 (처음부터 버튼 클릭시)
+        function resetApp() {
+            cancelAnimationFrame(animationFrameId);
+            clearInterval(restIntervalId);
+            clearInterval(countdownIntervalId);
+            
+            state.status = 'IDLE';
+            state.currentRep = 0;
+            state.currentSet = 1;
+            state.repElapsedTime = 0;
+
+            // UI 일괄 원상 복구
+            currentCountEl.textContent = "0";
+            setBadge.textContent = `SET 1 / ${state.targetSets}`;
+            glowEffect.className = "absolute w-60 h-60 rounded-full bg-indigo-500/10 blur-xl transition-all duration-300";
+
+            // 스피너 원형 테두리 초기화
+            progressCircle.style.transition = 'none';
+            progressCircle.setAttribute('stroke', '#6366f1');
+            updateProgressCircle(0);
+
+            // 하단 정보 텍스트 복구
+            updateTargetRepsDisplay();
+
+            startBtnText.textContent = '스쿼트 시작';
+            startBtnIcon.className = 'fa-solid fa-play text-xl';
+            startBtn.className = 'col-span-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all text-lg';
+
+            showToast("타이머가 처음부터 리셋되었습니다.");
+        }
+
+        // 사용자가 슬라이더나 수치 조절 시 실시간 상태값 저장 연동
+        function bindInputs() {
+            // 속도 조절
+            repSpeedInput.addEventListener('input', (e) => {
+                state.repSpeed = parseFloat(e.target.value);
+                speedValDisplay.textContent = `${state.repSpeed.toFixed(1)}초`;
+                localStorage.setItem('squat_speed', state.repSpeed);
+            });
+
+            // 목표량 설정
+            targetRepsInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 5) val = 5;
+                state.targetReps = val;
+                targetRepsInput.value = val;
+                updateTargetRepsDisplay();
+                localStorage.setItem('squat_target', val);
+            });
+
+            // 목표 세트 설정
+            targetSetsInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 1) val = 1;
+                state.targetSets = val;
+                targetSetsInput.value = val;
+                setBadge.textContent = `SET ${state.currentSet} / ${val}`;
+                localStorage.setItem('squat_target_sets', val);
+            });
+
+            // 휴식 시간 설정
+            restTimeInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 5) val = 10;
+                state.restTime = val;
+                restTimeInput.value = val;
+                localStorage.setItem('squat_rest', val);
+            });
+
+            // 상단 우측 톱니바퀴 토글 슬라이더 애니메이션 (하단 패널 열고 닫기)
+            toggleSettingsBtn.addEventListener('click', () => {
+                settingsPanel.classList.toggle('hidden');
+            });
+        }
+
+        // 모든 컨트롤러 바인딩 시작
+        startBtn.addEventListener('click', toggleApp);
+        resetBtn.addEventListener('click', resetApp);
+
+        // 페이지 진입 초기 구동 로직
+        window.onload = function() {
+            loadSettings();
+            bindInputs();
+            // 스피너 원 지름 기본 셋업
+            updateProgressCircle(0);
+
+            // Web Speech API의 목소리가 비동기식으로 로드되는 환경 대응
+            if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = getGoogleKoreanVoice;
+            }
+        }
+    </script>
+</body>
+</html>
