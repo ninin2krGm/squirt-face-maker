@@ -15,44 +15,92 @@
             font-family: 'Noto Sans KR', 'Inter', sans-serif;
             background-color: #0f172a; /* Slate 900 */
         }
+        /* 축하 효과 애니메이션 */
+        @keyframes scaleUp {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .animate-scale-up {
+            animation: scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
     </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+<body class="text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden relative">
 
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+    <!-- 최고 기록 및 목표 달성 시 오색 가루가 날릴 백그라운드 캔버스 -->
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-40 hidden"></canvas>
+
+    <!-- 실시간 최고 기록 경신 및 목표 세트 완수 팝업 오버레이 -->
+    <div id="celebration-overlay" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900/95 border-2 border-amber-500 rounded-3xl p-8 shadow-2xl shadow-amber-500/30 z-50 text-center hidden w-[90%] max-w-sm animate-scale-up">
+        <div class="w-16 h-16 bg-amber-500/20 border border-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+            <i class="fa-solid fa-trophy text-amber-400 text-3xl"></i>
+        </div>
+        <h2 id="pop-title" class="text-2xl font-black text-amber-400 mb-2">신기록 달성!</h2>
+        <p id="pop-desc" class="text-slate-300 text-sm mb-4 leading-relaxed">축하합니다! 기존의 한계를 극복하고<br><span class="text-white font-bold text-base">스쿼트 최고 기록</span>을 경신하셨습니다.</p>
+        <div class="bg-slate-800/80 px-4 py-2.5 rounded-xl border border-slate-700/60 inline-block">
+            <span id="pop-record-text" class="text-amber-300 font-extrabold text-base">3세트 150개 돌파!</span>
+        </div>
+    </div>
+
+    <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-4 py-2">
         <div class="max-w-md mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                    <i class="fa-solid fa-person-running text-white text-xl"></i>
+            <div class="flex items-center space-x-2">
+                <div class="w-5 h-5 rounded-md bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25">
+                    <i class="fa-solid fa-person-running text-white text-[10px]"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-black tracking-tight text-white">스쿼트 페이스 메이커</h1>
-                    <p class="text-xs text-indigo-400 font-medium">자동 카운팅 & 세트 타이머</p>
+                    <h1 class="text-[10px] font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                        스쿼트 페이스 메이커
+                        <span class="text-[8px] bg-indigo-500/30 text-indigo-300 px-1 py-0.2 rounded font-black">v2.0</span>
+                    </h1>
+                    <p class="text-[8px] text-indigo-400 font-medium">자동 카운팅 & 세트 타이머</p>
                 </div>
             </div>
-            <!-- 설정 하단 슬라이딩 토글 버튼 -->
-            <button id="toggle-settings-btn" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all text-slate-300">
-                <i class="fa-solid fa-sliders text-lg"></i>
-            </button>
+            
+            <!-- 상단 설정 및 볼륨 조절 슬레이트 -->
+            <div class="flex items-center space-x-2">
+                <!-- 볼륨 슬라이더 컨트롤러 -->
+                <div class="flex items-center space-x-1.5 bg-slate-800/70 px-2 py-1 rounded-lg border border-slate-700/40">
+                    <i id="volume-icon" class="fa-solid fa-volume-high text-[10px] text-slate-300"></i>
+                    <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.8" 
+                           class="w-12 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                </div>
+                <!-- 설정 하단 슬라이딩 토글 버튼 -->
+                <button id="toggle-settings-btn" class="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all text-slate-300">
+                    <i class="fa-solid fa-sliders text-[10px]"></i>
+                </button>
+            </div>
         </div>
     </header>
 
-    <main class="flex-grow flex flex-col justify-start items-center px-4 py-8 max-w-md mx-auto w-full space-y-6">
+    <!-- 최고 기록 표시 보드 (2배로 키우고 하단 테두리 제거) -->
+    <div class="w-full py-2.5 text-center bg-slate-900/10">
+        <div class="max-w-md mx-auto flex items-center justify-center space-x-1.5 px-4">
+            <i class="fa-solid fa-crown text-amber-500 animate-pulse text-base"></i>
+            <span id="max-record-board" class="text-sm font-black text-amber-300/95 tracking-wide">🏆 당신의 최고 기록은 1세트 0개 입니다.</span>
+        </div>
+    </div>
+
+    <main class="flex-grow flex flex-col justify-start items-center px-4 py-6 max-w-md mx-auto w-full space-y-5">
         
-        <!-- 중앙 대형 세트 표시 배지 -->
-        <div class="flex justify-center w-full my-2">
+        <!-- 중앙 대형 세트 표시 배지 및 현재 총 갯수 24px 디스플레이 -->
+        <div class="flex flex-col items-center justify-center w-full my-1 space-y-2">
             <div class="px-8 py-2.5 bg-indigo-600/10 border-2 border-indigo-500/30 rounded-2xl shadow-lg shadow-indigo-500/5">
                 <span id="set-badge" class="text-3xl font-black text-indigo-400 tracking-widest">SET 1 / 5</span>
             </div>
+            <!-- 실시간 누적 총 갯수 표시 (테두리 없음, 24px 크기) -->
+            <div id="total-count-display" class="text-[24px] font-extrabold text-slate-300 tracking-wide">
+                총 0개
+            </div>
         </div>
 
-        <!-- 이미지 오프셋 이슈 해결용 일치형 스피너 구조 -->
+        <!-- 정밀 12시 정렬 스피너 구조 -->
         <div class="relative w-72 h-72 flex items-center justify-center">
             
             <!-- 배경 네온 광원 효과 -->
             <div id="glow-effect" class="absolute w-60 h-60 rounded-full bg-indigo-500/10 blur-xl transition-all duration-300"></div>
             
-            <!-- 원형 Progress Ring (전체 SVG의 -90도 회전을 통한 완벽 정렬 및 12시 시작 고정) -->
+            <!-- 원형 Progress Ring -->
             <svg class="absolute w-full h-full transform -rotate-90" viewBox="0 0 288 288">
                 <!-- 회색 가이드 라인 원 -->
                 <circle cx="144" cy="144" r="120" stroke="#1e293b" stroke-width="12" fill="transparent" />
@@ -73,10 +121,10 @@
 
         <!-- 메인 제어 컨트롤 버튼 -->
         <div class="w-full grid grid-cols-3 gap-3 max-w-sm">
-            <!-- 초기화 버튼 -->
+            <!-- 리셋 / 정지 가변 대응 버튼 -->
             <button id="reset-btn" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700/60 text-slate-300 font-bold py-4 px-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all">
-                <i class="fa-solid fa-arrow-rotate-left text-lg"></i>
-                <span class="text-xs">처음부터</span>
+                <i id="reset-btn-icon" class="fa-solid fa-arrow-rotate-left text-lg"></i>
+                <span id="reset-btn-text" class="text-xs">리셋</span>
             </button>
             
             <!-- 시작 / 정지 메인 버튼 (휴식 중에는 '바로 시작'으로 자동 다이내믹 변경) -->
@@ -144,9 +192,9 @@
     </main>
 
     <!-- 하단 푸터 및 안내 문구 -->
-    <footer class="py-6 text-center border-t border-slate-800/80 bg-slate-950/40 text-xs text-slate-500 px-4">
+    <footer class="py-4 text-center border-t border-slate-800/80 bg-slate-950/40 text-xs text-slate-500 px-4">
         <p class="max-w-xs mx-auto mb-1">소리가 나지 않을 경우 기기의 무음 모드를 해제하고 볼륨을 켜주세요.</p>
-        <p class="text-[10px] text-slate-600">© 2026 스쿼트 페이스메이커 v2.4</p>
+        <p class="text-[10px] text-slate-600">© 2026 스쿼트 페이스메이커 v2.0</p>
     </footer>
 
     <!-- 알림 메시지 토스트 오버레이 -->
@@ -166,8 +214,14 @@
             restTime: 60, // 휴식 시간 (초)
             restTimeLeft: 60, // 남은 휴식 시간
             repElapsedTime: 0, // 현재 회차 진행 시간 (ms)
-            lastFrameTime: 0 // 이전 프레임 시간 기록
+            lastFrameTime: 0, // 이전 프레임 시간 기록
+            initialMaxTotal: 0, // 세션 개시 시점의 로컬 최고 기록 백업용
+            celebratedNewRecord: false, // 신기록 경신 축하 중복방지 플래그
+            volume: 0.8 // 볼륨 기본값
         };
+
+        // 최고 기록 객체 로드용 기본 셋업
+        let maxRecord = { sets: 1, reps: 0, total: 0 };
 
         // UI 엘리먼트 수집
         const progressCircle = document.getElementById('progress-circle');
@@ -179,13 +233,22 @@
         const targetSetsInput = document.getElementById('target-sets');
         const restTimeInput = document.getElementById('rest-time');
         const setBadge = document.getElementById('set-badge');
+        const totalCountDisplay = document.getElementById('total-count-display');
         const startBtn = document.getElementById('start-btn');
         const startBtnIcon = document.getElementById('start-btn-icon');
         const startBtnText = document.getElementById('start-btn-text');
+        
+        // 리셋/정지 버튼 구성 요소
         const resetBtn = document.getElementById('reset-btn');
+        const resetBtnIcon = document.getElementById('reset-btn-icon');
+        const resetBtnText = document.getElementById('reset-btn-text');
+
         const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
         const settingsPanel = document.getElementById('settings-panel');
         const glowEffect = document.getElementById('glow-effect');
+        const maxRecordBoard = document.getElementById('max-record-board');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeIcon = document.getElementById('volume-icon');
 
         // SVG Progress Circle 둘레 공식 (r=120 -> 2 * PI * r)
         const CIRCLE_RADIUS = 120;
@@ -218,7 +281,9 @@
                 osc.type = 'sine'; // 깔끔하고 부드러운 사인파 비프음
                 osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
                 
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime); // 볼륨 적절히 조절
+                // 설정한 볼륨에 비례하여 비프음 출력 (기본 스케일 가중치 보정 0.25)
+                const baseVolume = 0.25 * state.volume;
+                gain.gain.setValueAtTime(baseVolume, audioCtx.currentTime); 
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
                 osc.connect(gain);
@@ -229,6 +294,70 @@
             } catch (err) {
                 console.warn('사운드 출력이 제한되었습니다:', err);
             }
+        }
+
+        // 최고 기록 표시 업데이트
+        function updateMaxRecordDisplay() {
+            if (maxRecord && maxRecord.total > 0) {
+                maxRecordBoard.textContent = `🏆 당신의 최고 기록은 ${maxRecord.sets}세트 ${maxRecord.reps}개 입니다.`;
+            } else {
+                maxRecordBoard.textContent = `🏆 아직 등록된 최고 기록이 없습니다. 파이팅!`;
+            }
+        }
+
+        // 로컬스토리지에서 세팅 및 최고 기록 로드
+        function loadSettings() {
+            const savedSpeed = localStorage.getItem('squat_speed');
+            const savedTarget = localStorage.getItem('squat_target');
+            const savedTargetSets = localStorage.getItem('squat_target_sets');
+            const savedRest = localStorage.getItem('squat_rest');
+            const savedVolume = localStorage.getItem('squat_volume');
+            
+            // 최고 기록 불러오기
+            const savedMaxRecord = localStorage.getItem('squat_max_record');
+            if (savedMaxRecord) {
+                try {
+                    maxRecord = JSON.parse(savedMaxRecord);
+                } catch(e) {
+                    maxRecord = { sets: 1, reps: 0, total: 0 };
+                }
+            }
+            updateMaxRecordDisplay();
+
+            // 백업용 세션 초기 최고기록 설정
+            state.initialMaxTotal = maxRecord.total;
+
+            // 기본 속도는 1.8초 고정 (최초 진입 시)
+            if (savedSpeed) state.repSpeed = parseFloat(savedSpeed);
+            else state.repSpeed = 1.8;
+
+            if (savedTarget) state.targetReps = parseInt(savedTarget, 10);
+            if (savedTargetSets) state.targetSets = parseInt(savedTargetSets, 10);
+            if (savedRest) state.restTime = parseInt(savedRest, 10);
+            
+            if (savedVolume !== null) {
+                state.volume = parseFloat(savedVolume);
+            } else {
+                state.volume = 0.8;
+            }
+
+            // UI 제어 상태 복원
+            repSpeedInput.value = state.repSpeed;
+            speedValDisplay.textContent = `${state.repSpeed.toFixed(1)}초`;
+            targetRepsInput.value = state.targetReps;
+            targetSetsInput.value = state.targetSets;
+            restTimeInput.value = state.restTime;
+            
+            // 볼륨 UI 및 아이콘 업데이트
+            volumeSlider.value = state.volume;
+            updateVolumeIcon(state.volume);
+            
+            updateTargetRepsDisplay();
+            setBadge.textContent = `SET ${state.currentSet} / ${state.targetSets}`;
+            totalCountDisplay.textContent = `총 0개`;
+
+            // 최초 버튼 레이아웃 초기화
+            updateResetButtonUI();
         }
 
         // 구글 한국어 여성 목소리를 찾아 반환하는 함수 (고정 사양)
@@ -261,10 +390,101 @@
                 utterance.voice = selectedVoice;
             }
             
-            utterance.rate = 1.1; // 운동에 활력을 주기 위해 정속보다 약간 빠르게 설정
+            // 실시간 저장된 볼륨값 대입
+            utterance.volume = state.volume;
+            utterance.rate = 1.1; // 정속보다 약간 빠르게 설정
             utterance.pitch = 1.0; 
 
             synth.speak(utterance);
+        }
+
+        // 폭죽(Confetti) 전용 가벼운 캔버스 효과 구현
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let confettiActive = false;
+        let confettiParticles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class ConfettiParticle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height - canvas.height;
+                this.r = Math.random() * 6 + 4;
+                this.d = Math.random() * canvas.height;
+                this.color = `hsl(${Math.random() * 360}, 100%, 55%)`;
+                this.tilt = Math.random() * 10 - 5;
+                this.tiltAngleIncremental = Math.random() * 0.07 + 0.02;
+                this.tiltAngle = 0;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.lineWidth = this.r / 2;
+                ctx.strokeStyle = this.color;
+                ctx.moveTo(this.x + this.tilt + this.r / 2, this.y);
+                ctx.lineTo(this.x + this.tilt, this.y + this.tilt + this.r / 2);
+                ctx.stroke();
+            }
+        }
+
+        function triggerConfetti() {
+            canvas.classList.remove('hidden');
+            confettiActive = true;
+            confettiParticles = [];
+            for (let i = 0; i < 150; i++) {
+                confettiParticles.push(new ConfettiParticle());
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            animateConfetti();
+            
+            // 4.5초 뒤 자동 종료
+            setTimeout(() => {
+                confettiActive = false;
+                canvas.classList.add('hidden');
+            }, 4500);
+        }
+
+        function animateConfetti() {
+            if (!confettiActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let remaining = false;
+            confettiParticles.forEach((p) => {
+                p.tiltAngle += p.tiltAngleIncremental;
+                p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+                p.x += Math.sin(p.tiltAngle);
+                p.tilt = Math.sin(p.tiltAngle - p.r / 2) * 5;
+                
+                if (p.y <= canvas.height) {
+                    remaining = true;
+                }
+                p.draw();
+            });
+            if (remaining && confettiActive) {
+                requestAnimationFrame(animateConfetti);
+            }
+        }
+
+        // 축하 팝업 모달 알림 작동
+        function triggerCelebrationModal(title, desc, recordText) {
+            const overlay = document.getElementById('celebration-overlay');
+            const popTitle = document.getElementById('pop-title');
+            const popDesc = document.getElementById('pop-desc');
+            const popText = document.getElementById('pop-record-text');
+            
+            popTitle.textContent = title;
+            popDesc.innerHTML = desc;
+            popText.textContent = recordText;
+            
+            overlay.classList.remove('hidden');
+            
+            // 4초 뒤 부드럽게 페이드 아웃 및 가리기
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 4000);
         }
 
         // 로컬 알림 토스트 팝업 유틸리티
@@ -288,30 +508,19 @@
             }
         }
 
-        // 로컬스토리지에서 세팅 로드
-        function loadSettings() {
-            const savedSpeed = localStorage.getItem('squat_speed');
-            const savedTarget = localStorage.getItem('squat_target');
-            const savedTargetSets = localStorage.getItem('squat_target_sets');
-            const savedRest = localStorage.getItem('squat_rest');
-
-            // 기본 속도는 1.8초 고정 (최초 진입 시)
-            if (savedSpeed) state.repSpeed = parseFloat(savedSpeed);
-            else state.repSpeed = 1.8;
-
-            if (savedTarget) state.targetReps = parseInt(savedTarget, 10);
-            if (savedTargetSets) state.targetSets = parseInt(savedTargetSets, 10);
-            if (savedRest) state.restTime = parseInt(savedRest, 10);
-
-            // UI 제어 상태 복원
-            repSpeedInput.value = state.repSpeed;
-            speedValDisplay.textContent = `${state.repSpeed.toFixed(1)}초`;
-            targetRepsInput.value = state.targetReps;
-            targetSetsInput.value = state.targetSets;
-            restTimeInput.value = state.restTime;
-            
-            updateTargetRepsDisplay();
-            setBadge.textContent = `SET ${state.currentSet} / ${state.targetSets}`;
+        // 리셋 / 정지 가변 대응 버튼 UI 업데이트 함수
+        function updateResetButtonUI() {
+            if (state.status === 'RUNNING' || state.status === 'COUNTDOWN') {
+                // 운동 작동 중일 때는 '정지'로 변경
+                resetBtnText.textContent = '정지';
+                resetBtnIcon.className = 'fa-solid fa-stop text-lg text-red-400';
+                resetBtn.className = 'bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-red-500/30 text-slate-300 font-bold py-4 px-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all';
+            } else {
+                // 대기, 휴식, 일시정지 중일 때는 '리셋'으로 변경
+                resetBtnText.textContent = '리셋';
+                resetBtnIcon.className = 'fa-solid fa-arrow-rotate-left text-lg text-slate-400';
+                resetBtn.className = 'bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700/60 text-slate-300 font-bold py-4 px-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all';
+            }
         }
 
         let animationFrameId = null;
@@ -321,6 +530,7 @@
         // 최초 운동 개시 전 5초 대기 카운트다운 진행 함수
         function startCountdown() {
             state.status = 'COUNTDOWN';
+            updateResetButtonUI();
             let countdownVal = 5;
             currentCountEl.textContent = countdownVal;
             
@@ -333,12 +543,13 @@
                 countdownVal--;
                 if (countdownVal > 0) {
                     currentCountEl.textContent = countdownVal;
-                    playBeep(600, 0.08); // 준비 신호용 약간 낮은 비프음만 유지 (음성 안내 제거)
+                    playBeep(600, 0.08); // 준비 신호용 약간 낮은 비프음만 유지
                 } else {
                     clearInterval(countdownIntervalId);
                     
                     // 정규 운동 가동 상태로 안전 진입
                     state.status = 'RUNNING';
+                    updateResetButtonUI();
                     currentCountEl.textContent = "0";
                     startBtnText.textContent = '일시 정지';
                     startBtnIcon.className = 'fa-solid fa-pause text-xl';
@@ -374,13 +585,38 @@
                 state.repElapsedTime = 0; 
                 state.currentRep++;
                 
-                // 카운터 텍스트 실시간 반영
+                // 카운터 텍스트 및 실시간 총 갯수 실시간 반영
                 currentCountEl.textContent = state.currentRep;
+                const currentTotal = ((state.currentSet - 1) * state.targetReps) + state.currentRep;
+                totalCountDisplay.textContent = `총 ${currentTotal}개`;
 
                 // 1회 완료 알람음 발생 (Beep!)
                 playBeep(900, 0.12);
 
-                // 분기 조건 처리 (5회 배수 알림 vs 세트 완료 판정)
+                // 최고 기록 및 이중 축하 조건 정밀 체크 로직 가동
+                // 조건 1: 최고 기록 경신 순간 (3세트 제한 삭제, 최초 1회 최고기록 달성시에만 작동)
+                // 만약 이전 최고기록이 있었고, 그것을 돌파한 시점에 축하
+                if (state.initialMaxTotal > 0 && currentTotal === state.initialMaxTotal + 1 && !state.celebratedNewRecord) {
+                    state.celebratedNewRecord = true;
+                    speak("축하합니다! 최고 기록에 달성하셨습니다!");
+                    triggerCelebrationModal(
+                        "최고 기록 달성!", 
+                        "축하합니다! 기존의 한계를 극복하고<br><span class='text-white font-bold text-base'>최고 기록</span>을 경신하셨습니다.",
+                        `최고기록 경신! 총 ${currentTotal}개 돌파!`
+                    );
+                    triggerConfetti();
+                }
+
+                // 실시간 최고 기록 수치 업데이트 및 영구 저장
+                if (currentTotal > maxRecord.total) {
+                    maxRecord.total = currentTotal;
+                    maxRecord.sets = state.currentSet;
+                    maxRecord.reps = currentTotal;
+                    localStorage.setItem('squat_max_record', JSON.stringify(maxRecord));
+                    updateMaxRecordDisplay();
+                }
+
+                // 분기 조건 처리 (목표 달성 vs 5회 배수 알림)
                 if (state.currentRep >= state.targetReps) {
                     // 목표 달성 -> 휴식 단계 전환
                     endSet();
@@ -405,6 +641,7 @@
         function endSet() {
             cancelAnimationFrame(animationFrameId);
             state.status = 'REST';
+            updateResetButtonUI();
             state.restTimeLeft = state.restTime;
             
             // 글로우 테마 변경 (따뜻한 황금빛 휴식 글로우)
@@ -427,9 +664,15 @@
             // 가득 찬 원에서 출발
             updateProgressCircle(1);
 
-            // 음성 전달 분기구조 (목표 세트 완수 분기 확인)
+            // 조건 2: 목표 세트수 완전히 완수했을 때의 축하 로직 작동
             if (state.currentSet === state.targetSets) {
-                speak(`목표한 ${state.targetSets} 세트를 모두 완료하셨습니다! 대단하십니다. 이어서 운동을 계속 진행합니다.`);
+                speak(`목표 달성! 목표하신 ${state.targetSets}세트를 모두 완료하셨습니다! 정말 대단하십니다.`);
+                triggerCelebrationModal(
+                    "목표 세트 달성!", 
+                    `설정하신 운동 목표 세트를<br><span class='text-white font-bold text-base'>모두 완벽하게 완료</span>하셨습니다.`,
+                    `목표 ${state.targetSets}세트 전원 클리어!`
+                );
+                triggerConfetti();
             } else {
                 speak(`${state.currentSet}세트 완료. ${state.restTime}초 동안 휴식합니다.`);
             }
@@ -441,6 +684,16 @@
 
                 const ratio = state.restTimeLeft / state.restTime;
                 updateProgressCircle(ratio);
+
+                // 휴식 완료 10초 전 사전 음성 경보 발송
+                if (state.restTimeLeft === 10) {
+                    speak("10초 전입니다. 운동을 준비하세요.");
+                }
+
+                // 휴식 끝날 때 음성 안내 후, 마지막 5초 전부터 비프음(Beep) 소리나게 함
+                if (state.restTimeLeft <= 5 && state.restTimeLeft > 0) {
+                    playBeep(600, 0.08); // 1초 간격 준비용 가벼운 비프 신호음
+                }
 
                 if (state.restTimeLeft <= 0) {
                     clearInterval(restIntervalId);
@@ -455,10 +708,14 @@
             state.currentRep = 0;
             state.repElapsedTime = 0;
             state.status = 'RUNNING';
+            updateResetButtonUI();
 
             // UI 셋업 초기화
             currentCountEl.textContent = "0";
             setBadge.textContent = `SET ${state.currentSet} / ${state.targetSets}`;
+            
+            const currentTotal = (state.currentSet - 1) * state.targetReps;
+            totalCountDisplay.textContent = `총 ${currentTotal}개`;
             
             glowEffect.className = "absolute w-60 h-60 rounded-full bg-indigo-500/10 blur-xl transition-all duration-300";
 
@@ -510,6 +767,7 @@
             } else if (state.status === 'PAUSED') {
                 // 일시 정지 후 다시 시작할 때는 지체 없이 즉시 동작 가동
                 state.status = 'RUNNING';
+                updateResetButtonUI();
                 startBtnText.textContent = '일시 정지';
                 startBtnIcon.className = 'fa-solid fa-pause text-xl';
                 startBtn.className = 'col-span-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all text-lg';
@@ -519,6 +777,7 @@
             } else if (state.status === 'RUNNING') {
                 // 일시정지 처리
                 state.status = 'PAUSED';
+                updateResetButtonUI();
                 startBtnText.textContent = '다시 시작';
                 startBtnIcon.className = 'fa-solid fa-play text-xl';
                 startBtn.className = 'col-span-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all text-lg';
@@ -527,20 +786,49 @@
             }
         }
 
-        // 전체 카운팅 초기화 (처음부터 버튼 클릭시)
+        // 리셋 / 정지 가변 버튼 전용 핸들러
+        function handleResetOrStop() {
+            initAudio();
+
+            // 운동 중(RUNNING, COUNTDOWN)에는 '정지'로 작용하여 일시정지 상태로 변경
+            if (state.status === 'RUNNING' || state.status === 'COUNTDOWN') {
+                if (state.status === 'COUNTDOWN') {
+                    clearInterval(countdownIntervalId);
+                    resetApp();
+                    showToast("운동이 정지되었습니다.");
+                } else {
+                    state.status = 'PAUSED';
+                    updateResetButtonUI();
+                    startBtnText.textContent = '다시 시작';
+                    startBtnIcon.className = 'fa-solid fa-play text-xl';
+                    startBtn.className = 'col-span-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all text-lg';
+                    cancelAnimationFrame(animationFrameId);
+                    showToast("운동이 일시정지 되었습니다.");
+                }
+            } else {
+                // 대기 중 혹은 정지 중일 때 누르면 전체 데이터 완전 리셋
+                resetApp();
+            }
+        }
+
+        // 전체 카운팅 초기화 (리셋 버튼 작동 시)
         function resetApp() {
             cancelAnimationFrame(animationFrameId);
             clearInterval(restIntervalId);
             clearInterval(countdownIntervalId);
             
             state.status = 'IDLE';
+            updateResetButtonUI();
             state.currentRep = 0;
             state.currentSet = 1;
             state.repElapsedTime = 0;
+            state.celebratedNewRecord = false;
+            state.initialMaxTotal = maxRecord.total; // 세션 최고 기록 임계치 원복
 
             // UI 일괄 원상 복구
             currentCountEl.textContent = "0";
             setBadge.textContent = `SET 1 / ${state.targetSets}`;
+            totalCountDisplay.textContent = `총 0개`;
             glowEffect.className = "absolute w-60 h-60 rounded-full bg-indigo-500/10 blur-xl transition-all duration-300";
 
             // 스피너 원형 테두리 초기화
@@ -555,7 +843,18 @@
             startBtnIcon.className = 'fa-solid fa-play text-xl';
             startBtn.className = 'col-span-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all text-lg';
 
-            showToast("타이머가 처음부터 리셋되었습니다.");
+            showToast("타이머가 리셋되었습니다.");
+        }
+
+        // 볼륨 아이콘 시각 요소 변경
+        function updateVolumeIcon(vol) {
+            if (vol === 0) {
+                volumeIcon.className = "fa-solid fa-volume-xmark text-[10px] text-slate-500";
+            } else if (vol < 0.5) {
+                volumeIcon.className = "fa-solid fa-volume-low text-[10px] text-slate-400";
+            } else {
+                volumeIcon.className = "fa-solid fa-volume-high text-[10px] text-slate-300";
+            }
         }
 
         // 사용자가 슬라이더나 수치 조절 시 실시간 상태값 저장 연동
@@ -596,6 +895,14 @@
                 localStorage.setItem('squat_rest', val);
             });
 
+            // 볼륨 조절 슬라이더 이벤트 바인딩
+            volumeSlider.addEventListener('input', (e) => {
+                const vol = parseFloat(e.target.value);
+                state.volume = vol;
+                updateVolumeIcon(vol);
+                localStorage.setItem('squat_volume', vol);
+            });
+
             // 상단 우측 톱니바퀴 토글 슬라이더 애니메이션 (하단 패널 열고 닫기)
             toggleSettingsBtn.addEventListener('click', () => {
                 settingsPanel.classList.toggle('hidden');
@@ -604,7 +911,7 @@
 
         // 모든 컨트롤러 바인딩 시작
         startBtn.addEventListener('click', toggleApp);
-        resetBtn.addEventListener('click', resetApp);
+        resetBtn.addEventListener('click', handleResetOrStop);
 
         // 페이지 진입 초기 구동 로직
         window.onload = function() {
