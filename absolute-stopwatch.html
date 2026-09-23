@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d10" />
+  <title>Time Trace</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#0b0d10; --panel:#14181e; --panel2:#191e25; --line:#252c35;
+      --text:#f4f7fb; --muted:#8994a3; --accent:#72f5b5; --accent2:#5dd7ff;
+      --danger:#ff6c79; --shadow:0 18px 50px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+    body{display:flex;justify-content:center}
+    button{font:inherit}
+    .app{width:min(100%,430px);min-height:100svh;padding:max(18px,env(safe-area-inset-top)) 18px max(26px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+    header{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 0}
+    .brand{font-size:18px;font-weight:800;letter-spacing:-.03em}.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+    .dot{width:7px;height:7px;border-radius:999px;background:#56606e}.dot.live{background:var(--accent);box-shadow:0 0 0 4px rgba(114,245,181,.10)}
+    .hero{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:28px;padding:24px 20px 20px;box-shadow:var(--shadow)}
+    .eyebrow{font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center}.timer{font-variant-numeric:tabular-nums;font-size:clamp(42px,12.7vw,60px);font-weight:760;line-height:1;letter-spacing:-.055em;white-space:nowrap;text-align:center}
+    .days{font-size:14px;color:var(--accent);min-height:22px;margin-top:10px;font-weight:700;text-align:center}
+    .main-stamp{margin-top:16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px;min-height:48px}
+    .main-date{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.35}
+    .main-time{font-size:19px;font-weight:700;letter-spacing:-.025em;font-variant-numeric:tabular-nums;line-height:1.35}
+    .controls{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:92px}.control-slot{display:flex;align-items:center}.control-slot.left{grid-column:1;justify-content:flex-end;padding-right:14px}.control-slot.right{grid-column:3;justify-content:flex-start;padding-left:14px}.icon-btn{border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;transition:transform .12s ease,opacity .12s ease,background .15s ease}.icon-btn:active{transform:scale(.96)}.main-control{grid-column:2;width:78px;height:78px;border-radius:999px;background:var(--accent);color:#07110d;border-color:transparent;box-shadow:0 12px 34px rgba(114,245,181,.18)}.main-control.running{background:#ff6c79;color:#20080d;box-shadow:0 12px 34px rgba(255,108,121,.18)}.side-control{width:58px;height:58px;border-radius:999px;background:#1b2129;color:var(--text)}.side-control:disabled{opacity:.28;pointer-events:none}.icon-btn svg{width:28px;height:28px;fill:currentColor}.side-control svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .laps-inline{display:flex;flex-direction:column;margin-top:-4px;border-top:1px solid var(--line);max-height:42svh;overflow:auto}.empty{padding:22px 6px 24px;text-align:center;color:var(--muted);font-size:13px}.lap{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:13px 6px;border-bottom:1px solid var(--line)}
+    .lap-no{color:var(--muted);font-size:12px;font-weight:700}.lap-main{min-width:0}.lap-elapsed{font-variant-numeric:tabular-nums;font-size:16px;font-weight:720}.lap-delta{font-size:11px;color:var(--muted);margin-top:3px}.lap-clock{text-align:right;font-size:12px;color:#b6c0cb;line-height:1.35}.lap-date{color:var(--muted);font-size:10px}
+    .note{font-size:11px;line-height:1.55;color:#687381;padding:0 4px 4px}
+    @media (min-width:700px){body{padding:28px 0}.app{min-height:auto}.hero{padding-top:28px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">Time Trace</div>
+      <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">대기 중</span></div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">경과 시간</div>
+      <div id="timer" class="timer">00:00:00.00</div>
+      <div id="days" class="days"></div>
+      <div class="main-stamp">
+        <div id="mainDate" class="main-date">—</div>
+        <div id="mainTime" class="main-time">—</div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <div class="control-slot left">
+        <button id="resetBtn" class="icon-btn side-control" aria-label="리셋">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 8.2A8 8 0 1 1 4 13"/><path d="M5.2 8.2V4.8M5.2 8.2H8.6"/></svg>
+        </button>
+      </div>
+      <button id="mainBtn" class="icon-btn main-control" aria-label="시작">
+        <svg id="mainIconPlay" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>
+        <svg id="mainIconStop" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><path d="M7 7h10v10H7z"/></svg>
+      </button>
+      <div class="control-slot right">
+        <button id="lapBtn" class="icon-btn side-control" aria-label="랩 기록" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 13l3.2-2.1M9.5 3.5h5M12 5.5V3.5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="laps" class="laps-inline"><div class="empty">랩을 누르면 아래에 기록이 쌓입니다.</div></div>
+
+    <div class="note">기록은 이 브라우저의 로컬 저장소에 보관됩니다. 실행 중에는 앱을 닫아도 시작 시각을 기준으로 다시 계산하므로 시간이 계속 이어집니다.</div>
+  </main>
+
+<script>
+(() => {
+  const KEY = 'time-trace-v1';
+  const $ = (s) => document.querySelector(s);
+  const els = {
+    timer: $('#timer'), days: $('#days'), mainDate: $('#mainDate'), mainTime: $('#mainTime'),
+    mainBtn: $('#mainBtn'), mainIconPlay: $('#mainIconPlay'), mainIconStop: $('#mainIconStop'), resetBtn: $('#resetBtn'), lapBtn: $('#lapBtn'),
+    laps: $('#laps'), statusDot: $('#statusDot'), statusText: $('#statusText')
+  };
+
+  const blank = () => ({ active: null });
+
+  function load() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(KEY));
+      if (!parsed || typeof parsed !== 'object') return blank();
+      return { active: parsed.active || null };
+    } catch { return blank(); }
+  }
+
+  let state = load();
+
+  function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+  function elapsedMs(now = Date.now()) {
+    const a = state.active;
+    if (!a) return 0;
+    return a.accumulatedMs + (a.running ? now - a.runStartedAt : 0);
+  }
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function formatElapsed(ms) {
+    ms = Math.max(0, ms);
+    const totalSec = Math.floor(ms/1000);
+    const h = Math.floor(totalSec/3600);
+    const m = Math.floor((totalSec%3600)/60);
+    const s = totalSec%60;
+    const cs = Math.floor((ms%1000)/10);
+    return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(cs)}`;
+  }
+  function formatCompact(ms){
+    const sec=Math.floor(ms/1000), d=Math.floor(sec/86400), h=Math.floor((sec%86400)/3600), m=Math.floor((sec%3600)/60), s=sec%60, cs=Math.floor((ms%1000)/10);
+    return d>0 ? `${d}일 ${pad(h)}:${pad(m)}:${pad(s)}.${pad(cs)}` : `${pad(h)}:${pad(m)}:${pad(s)}.${pad(cs)}`;
+  }
+  function dateTime(ts, multiline=false){
+    const d = new Date(ts);
+    const date = new Intl.DateTimeFormat('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).format(d);
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const s = d.getSeconds();
+    const time = `${h}시${m}분${s}초`;
+    return multiline ? {date,time} : `${date} ${time}`;
+  }
+
+  function render(now=Date.now()){
+    const a = state.active;
+    if (!a){
+      els.timer.textContent='00:00:00.00'; els.days.textContent=''; els.mainDate.textContent='—'; els.mainTime.textContent='—';
+      els.mainBtn.classList.remove('running'); els.mainBtn.setAttribute('aria-label','시작');
+      els.mainIconPlay.style.display='block'; els.mainIconStop.style.display='none';
+      els.resetBtn.disabled=true; els.lapBtn.disabled=true; els.statusDot.classList.remove('live'); els.statusText.textContent='대기 중';
+    } else {
+      const ms=elapsedMs(now), totalHours=Math.floor(ms/3600000), days=Math.floor(totalHours/24);
+      els.timer.textContent=formatElapsed(ms);
+      els.days.textContent=days>0 ? `${days}일 경과 · 총 ${totalHours}시간` : '';
+      const running=!!a.running;
+      const startDT=dateTime(a.startedAt,true);
+      if(running || !a.stoppedAt){
+        els.mainDate.textContent=startDT.date;
+        els.mainTime.textContent=startDT.time;
+      } else {
+        const stopDT=dateTime(a.stoppedAt,true);
+        els.mainDate.textContent = startDT.date===stopDT.date ? startDT.date : `${startDT.date} → ${stopDT.date}`;
+        els.mainTime.textContent = `${startDT.time} → ${stopDT.time}`;
+      }
+      els.mainBtn.classList.toggle('running',running);
+      els.mainBtn.setAttribute('aria-label',running?'정지':'새로 시작');
+      els.mainIconPlay.style.display=running?'none':'block';
+      els.mainIconStop.style.display=running?'block':'none';
+      els.resetBtn.disabled=false; els.lapBtn.disabled=!running;
+      els.statusDot.classList.toggle('live',running); els.statusText.textContent=running?'기록 중':'정지';
+    }
+    renderLaps();
+  }
+
+  function renderLaps(){
+    const laps = state.active?.laps || [];
+    if(!laps.length){ els.laps.innerHTML='<div class="empty">랩을 누르면 아래에 기록이 쌓입니다.</div>'; return; }
+    els.laps.innerHTML = laps.slice().reverse().map((lap, revIdx)=>{
+      const n=laps.length-revIdx; const dt=dateTime(lap.at,true);
+      return `<div class="lap"><div class="lap-no">LAP ${n}</div><div class="lap-main"><div class="lap-elapsed">${formatCompact(lap.elapsedMs)}</div><div class="lap-delta">구간 +${formatCompact(lap.deltaMs)}</div></div><div class="lap-clock"><div>${dt.time}</div><div class="lap-date">${dt.date}</div></div></div>`;
+    }).join('');
+  }
+
+  function mainToggle(){
+    const now=Date.now();
+    if(!state.active || !state.active.running){
+      state.active={ startedAt:now, runStartedAt:now, accumulatedMs:0, running:true, stoppedAt:null, laps:[] };
+    } else {
+      const a=state.active;
+      a.accumulatedMs += now-a.runStartedAt;
+      a.running=false;
+      a.runStartedAt=null;
+      a.stoppedAt=now;
+    }
+    save(); render(now);
+  }
+
+  function addLap(){
+    if(!state.active?.running) return;
+    const now=Date.now(), e=elapsedMs(now), laps=state.active.laps;
+    const prev=laps.length?laps[laps.length-1].elapsedMs:0;
+    laps.push({at:now, elapsedMs:e, deltaMs:e-prev});
+    save(); render(now);
+  }
+
+  function resetTimer(){
+    state.active=null;
+    save();
+    render(Date.now());
+  }
+
+  els.mainBtn.addEventListener('click',mainToggle);
+  els.resetBtn.addEventListener('click',resetTimer);
+  els.lapBtn.addEventListener('click',addLap);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render(Date.now()); });
+  window.addEventListener('focus',()=>render(Date.now()));
+  setInterval(()=>{ if(state.active?.running) render(Date.now()); },20);
+  render();
+})();
+</script>
+</body>
+</html>
